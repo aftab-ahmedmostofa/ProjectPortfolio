@@ -13,6 +13,7 @@ import {
   executiveInsights,
   forecastCost,
 } from "@/lib/analytics";
+import { evaluateAlerts, alertSeverityCounts } from "@/lib/alerts";
 import { formatCurrency, formatPercent } from "@/lib/format";
 
 export default function DashboardPage() {
@@ -29,6 +30,9 @@ export default function DashboardPage() {
     !p.approvals.some((a) => a.decision === "Rejected")
   ).length;
 
+  const alertCounts = alertSeverityCounts(evaluateAlerts(projects));
+  const totalAlerts = alertCounts.critical + alertCounts.warn + alertCounts.info;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -38,9 +42,24 @@ export default function DashboardPage() {
             Real-time view of cost, delivery, quality and risk across the portfolio.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span className="badge bg-emerald-50 text-emerald-700">All systems nominal</span>
-        </div>
+        <Link href="/alerts" className="flex items-center gap-2 text-xs">
+          {totalAlerts === 0 ? (
+            <span className="badge bg-emerald-50 text-emerald-700">All systems nominal</span>
+          ) : (
+            <>
+              {alertCounts.critical > 0 ? (
+                <span className="badge bg-rose-100 text-rose-700">● {alertCounts.critical} critical</span>
+              ) : null}
+              {alertCounts.warn > 0 ? (
+                <span className="badge bg-amber-100 text-amber-800">● {alertCounts.warn} warn</span>
+              ) : null}
+              {alertCounts.info > 0 ? (
+                <span className="badge bg-slate-100 text-slate-600">● {alertCounts.info} info</span>
+              ) : null}
+              <span className="text-brand-600 hover:underline">View alerts →</span>
+            </>
+          )}
+        </Link>
       </div>
 
       <section aria-label="Key performance indicators" className="grid grid-cols-2 gap-3 md:grid-cols-4">

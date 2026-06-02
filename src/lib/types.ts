@@ -70,26 +70,57 @@ export interface Project {
 
 export type RiskLevel = "Low" | "Medium" | "High";
 
+// Multi-select filters: an empty array means "no filter applied" (i.e. all values).
 export interface PortfolioFilters {
-  country: string | "All";
-  businessUnit: string | "All";
-  subsidiary: string | "All";
-  status: ProjectStatus | "All";
-  priority: "Low" | "Medium" | "High" | "All";
-  riskLevel: RiskLevel | "All";
-  dateFrom: string; // "" means unset; ISO yyyy-mm-dd. Matches projects with plannedEndDate >= dateFrom.
-  dateTo: string;   // "" means unset. Matches projects with plannedEndDate <= dateTo.
+  country: string[];
+  businessUnit: string[];
+  subsidiary: string[];
+  status: ProjectStatus[];
+  priority: ("Low" | "Medium" | "High")[];
+  riskLevel: RiskLevel[];
+  dateFrom: string;
+  dateTo: string;
   search: string;
 }
 
 export const EMPTY_FILTERS: PortfolioFilters = {
-  country: "All",
-  businessUnit: "All",
-  subsidiary: "All",
-  status: "All",
-  priority: "All",
-  riskLevel: "All",
+  country: [],
+  businessUnit: [],
+  subsidiary: [],
+  status: [],
+  priority: [],
+  riskLevel: [],
   dateFrom: "",
   dateTo: "",
   search: "",
 };
+
+export type AlertSeverity = "info" | "warn" | "critical";
+
+export interface PortfolioAlert {
+  id: string;
+  projectId: string;
+  projectName: string;
+  rule: string;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+}
+
+export type NotificationKind =
+  | "approval-request"
+  | "approval-decided"
+  | "project-created"
+  | "watch-reminder";
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  from: string;
+  to: string;
+  subject: string;
+  body: string;
+  projectId?: string;
+  createdAt: string; // ISO
+  read: boolean;
+}

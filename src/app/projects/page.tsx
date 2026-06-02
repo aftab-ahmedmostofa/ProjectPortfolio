@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useApp } from "@/components/AppProvider";
 import { StatusBadge, RiskBadge, ProgressBar } from "@/components/ui";
+import { WatchToggle } from "@/components/WatchToggle";
 import { assessRisk, forecastCost } from "@/lib/analytics";
 import { formatCurrency } from "@/lib/format";
 import { ROLE_POLICIES } from "@/lib/rbac";
@@ -43,6 +44,7 @@ export default function ProjectsPage() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
+              <th className="w-8 px-3 py-3" aria-label="Watch" />
               <th className="px-4 py-3">Project</th>
               <th className="px-4 py-3">Subsidiary / Country</th>
               <th className="px-4 py-3">Status</th>
@@ -58,6 +60,9 @@ export default function ProjectsPage() {
               const over = cost.projectedOverrun > 0;
               return (
                 <tr key={p.id} className="hover:bg-slate-50">
+                  <td className="px-3 py-3">
+                    <WatchToggle projectId={p.id} />
+                  </td>
                   <td className="px-4 py-3">
                     <Link href={`/projects/${p.id}`} className="font-medium text-brand-700 hover:underline">
                       {p.name}
@@ -85,7 +90,7 @@ export default function ProjectsPage() {
             })}
             {projects.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-400">
                   No projects match the current filters / role scope.
                 </td>
               </tr>

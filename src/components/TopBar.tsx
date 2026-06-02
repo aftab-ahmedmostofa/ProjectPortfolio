@@ -4,6 +4,7 @@ import { useApp } from "./AppProvider";
 import { ALL_ROLES, ROLE_POLICIES } from "@/lib/rbac";
 import { Role } from "@/lib/types";
 import { TODAY } from "@/lib/data";
+import { NotificationsBell } from "./NotificationsBell";
 
 export function TopBar() {
   const { role, setRole, filters, setFilters } = useApp();
@@ -32,6 +33,8 @@ export function TopBar() {
           />
           <span className="pointer-events-none absolute left-2.5 top-1.5 text-slate-400">⌕</span>
         </div>
+
+        <NotificationsBell />
 
         <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
           <span className="text-xs text-slate-500">Signed in as</span>
