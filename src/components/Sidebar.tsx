@@ -8,6 +8,7 @@ import { evaluateAlerts } from "@/lib/alerts";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: "▦", badge: "" as const },
+  { href: "/pm-summary", label: "PM Summary", icon: "▥", badge: "" as const },
   { href: "/projects", label: "Projects", icon: "▤", badge: "" as const },
   { href: "/timeline", label: "Timeline", icon: "▭", badge: "" as const },
   { href: "/members", label: "Members", icon: "◔", badge: "" as const },
