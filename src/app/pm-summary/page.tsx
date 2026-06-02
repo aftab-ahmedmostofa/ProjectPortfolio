@@ -84,9 +84,6 @@ export default function PmSummaryPage() {
           <h1 className="text-2xl font-bold tracking-[0.18em] text-slate-900">
             <span className="text-teal-500">PROJECT</span> MANAGEMENT SUMMARY
           </h1>
-          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">
-            Tableau-style interactive analytics · cross-filter by clicking any chart · switch chart types per panel
-          </p>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <span className="text-slate-500">Active scope: {projects.length} projects</span>
