@@ -68,8 +68,28 @@ export interface Project {
   approvals: ApprovalStep[];
 }
 
+export type RiskLevel = "Low" | "Medium" | "High";
+
 export interface PortfolioFilters {
   country: string | "All";
   businessUnit: string | "All";
   subsidiary: string | "All";
+  status: ProjectStatus | "All";
+  priority: "Low" | "Medium" | "High" | "All";
+  riskLevel: RiskLevel | "All";
+  dateFrom: string; // "" means unset; ISO yyyy-mm-dd. Matches projects with plannedEndDate >= dateFrom.
+  dateTo: string;   // "" means unset. Matches projects with plannedEndDate <= dateTo.
+  search: string;
 }
+
+export const EMPTY_FILTERS: PortfolioFilters = {
+  country: "All",
+  businessUnit: "All",
+  subsidiary: "All",
+  status: "All",
+  priority: "All",
+  riskLevel: "All",
+  dateFrom: "",
+  dateTo: "",
+  search: "",
+};

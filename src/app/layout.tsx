@@ -3,6 +3,7 @@ import "./globals.css";
 import { AppProvider } from "@/components/AppProvider";
 import { Sidebar } from "@/components/Sidebar";
 import { TopBar } from "@/components/TopBar";
+import { FilterBar } from "@/components/FilterBar";
 
 export const metadata: Metadata = {
   title: "AI Portfolio Dashboard",
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Sidebar />
             <div className="flex min-w-0 flex-1 flex-col">
               <TopBar />
+              <FilterBar />
               <main className="flex-1 px-6 py-6">{children}</main>
             </div>
           </div>

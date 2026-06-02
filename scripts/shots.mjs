@@ -5,14 +5,6 @@ const BASE = "http://localhost:3000";
 const OUT = "/tmp/shots";
 mkdirSync(OUT, { recursive: true });
 
-const pages = [
-  { path: "/", name: "01-dashboard" },
-  { path: "/projects", name: "02-projects" },
-  { path: "/projects/PRJ-001", name: "03-project-detail" },
-  { path: "/approvals", name: "04-approvals" },
-  { path: "/ai-insights", name: "05-ai-insights" },
-];
-
 const browser = await chromium.launch();
 const ctx = await browser.newContext({
   viewport: { width: 1440, height: 900 },
@@ -20,13 +12,25 @@ const ctx = await browser.newContext({
 });
 const page = await ctx.newPage();
 
-for (const p of pages) {
-  await page.goto(BASE + p.path, { waitUntil: "networkidle" });
-  // give Recharts / client effects a moment to paint
+async function shot(path, name, prep) {
+  await page.goto(BASE + path, { waitUntil: "networkidle" });
+  if (prep) await prep();
   await page.waitForTimeout(1500);
-  await page.screenshot({ path: `${OUT}/${p.name}.png`, fullPage: true });
-  console.log("captured", p.name);
+  await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
+  console.log("captured", name);
 }
+
+await shot("/", "01-dashboard");
+await shot("/", "02-dashboard-filtered", async () => {
+  // Apply a Status=Delayed filter via the FilterBar to show chips + reduced count
+  const statusSelect = page.locator('label:has-text("Status") select');
+  await statusSelect.selectOption("Delayed");
+  await page.waitForTimeout(500);
+});
+await shot("/projects", "03-projects");
+await shot("/projects/PRJ-001", "04-project-detail");
+await shot("/approvals", "05-approvals");
+await shot("/ai-insights", "06-ai-insights");
 
 await browser.close();
 console.log("done");
