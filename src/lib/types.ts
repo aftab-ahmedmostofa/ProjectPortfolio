@@ -31,9 +31,80 @@ export interface Milestone {
 
 export interface Risk {
   id: string;
+  title: string;
+  description: string;
+  category: RiskCategory;
+  probability: 1 | 2 | 3 | 4 | 5;
+  impact: 1 | 2 | 3 | 4 | 5;
+  severity: Severity; // derived from probability × impact, cached for fast reads
+  mitigation: string;
+  mitigationProgress: number; // 0..100
+  ownerId?: string;
+  status: RiskStatus;
+  dueDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Back-compat for analytics: open = not Closed and not deleted; likelihood derived from probability.
+  open: boolean;
+  likelihood: number;
+  deletedAt?: string; // soft delete
+  activity: RiskActivityEntry[];
+}
+
+export type RiskCategory =
+  | "Technical"
+  | "Financial"
+  | "Operational"
+  | "Compliance"
+  | "Security"
+  | "Schedule"
+  | "Resource"
+  | "Stakeholder"
+  | "External"
+  | "Strategic"
+  | "Quality";
+
+export const RISK_CATEGORIES: RiskCategory[] = [
+  "Technical",
+  "Financial",
+  "Operational",
+  "Compliance",
+  "Security",
+  "Schedule",
+  "Resource",
+  "Stakeholder",
+  "External",
+  "Strategic",
+  "Quality",
+];
+
+export type RiskStatus = "Open" | "In Progress" | "Mitigated" | "Accepted" | "Closed";
+export const RISK_STATUSES: RiskStatus[] = ["Open", "In Progress", "Mitigated", "Accepted", "Closed"];
+
+export type RiskActivityKind =
+  | "created"
+  | "updated"
+  | "comment"
+  | "status-changed"
+  | "assigned"
+  | "deleted"
+  | "restored";
+
+export interface RiskActivityEntry {
+  id: string;
+  at: string;
+  actor: string;
+  kind: RiskActivityKind;
+  message: string;
+}
+
+// Legacy shape used only by the seed in src/lib/data.ts.
+// Migrated to Risk via lib/risks.ts → migrateLegacyRisk on app load.
+export interface LegacyRisk {
+  id: string;
   description: string;
   severity: Severity;
-  likelihood: number; // 0..1
+  likelihood: number;
   mitigation: string;
   open: boolean;
 }

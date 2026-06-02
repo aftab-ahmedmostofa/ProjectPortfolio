@@ -1,4 +1,5 @@
-import { Project, Member, ProjectMembership, Task } from "./types";
+import { Project, Member, ProjectMembership, Task, LegacyRisk } from "./types";
+import { migrateLegacyRisk } from "./risks";
 
 // Reference "today" for the demo dataset.
 export const TODAY = new Date("2026-05-28T00:00:00Z");
@@ -26,7 +27,13 @@ const m = (memberId: string, role: ProjectMembership["role"] = "Contributor"): P
 
 // Self-contained seed portfolio. In production this layer would be replaced by
 // ERP / PMO integrations (see README "Integration Requirements").
-const rawProjects: Array<Omit<Project, "members" | "tasks" | "parentProjectId"> & Partial<Pick<Project, "members" | "tasks" | "parentProjectId">>> = [
+// rawProjects keeps the legacy risk shape; we migrate to the new Risk model
+// in the export `projects` below.
+const rawProjects: Array<
+  Omit<Project, "risks" | "members" | "tasks" | "parentProjectId"> & {
+    risks: LegacyRisk[];
+  } & Partial<Pick<Project, "members" | "tasks" | "parentProjectId">>
+> = [
   {
     id: "PRJ-001",
     code: "DXB-CORE",
@@ -527,6 +534,7 @@ const seededTasks: Record<string, Task[]> = {
 
 export const projects: Project[] = rawProjects.map((p) => ({
   ...p,
+  risks: p.risks.map((r) => migrateLegacyRisk(r, p.startDate)),
   members: p.members ?? seededMembers[p.id] ?? [],
   tasks: p.tasks ?? seededTasks[p.id] ?? [],
 }));

@@ -12,10 +12,14 @@ import {
   Task,
   ProjectMembership,
   MembershipRole,
+  Risk,
+  RiskCategory,
+  RiskStatus,
 } from "@/lib/types";
 import { projects as seedProjects, seedMembers } from "@/lib/data";
 import { scopeProjects, ROLE_POLICIES } from "@/lib/rbac";
 import { assessRisk } from "@/lib/analytics";
+import { deriveSeverity, refreshDerived } from "@/lib/risks";
 
 interface AppState {
   role: Role;
@@ -62,6 +66,26 @@ interface AppState {
   addProjectMember: (projectId: string, memberId: string, role: MembershipRole) => void;
   updateProjectMemberRole: (projectId: string, memberId: string, role: MembershipRole) => void;
   removeProjectMember: (projectId: string, memberId: string) => void;
+  // Risk management
+  addRisk: (
+    projectId: string,
+    fields: {
+      title: string;
+      description?: string;
+      category: RiskCategory;
+      probability: 1 | 2 | 3 | 4 | 5;
+      impact: 1 | 2 | 3 | 4 | 5;
+      mitigation?: string;
+      ownerId?: string;
+      dueDate?: string;
+    }
+  ) => Risk | null;
+  updateRisk: (projectId: string, riskId: string, patch: Partial<Risk>) => void;
+  changeRiskStatus: (projectId: string, riskId: string, status: RiskStatus) => void;
+  assignRisk: (projectId: string, riskId: string, memberId: string | undefined) => void;
+  addRiskComment: (projectId: string, riskId: string, text: string) => void;
+  softDeleteRisk: (projectId: string, riskId: string) => void;
+  restoreRisk: (projectId: string, riskId: string) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -399,6 +423,230 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [mutateProject]
   );
 
+  // ---- Risk register ----
+  const mutateRisk = useCallback(
+    (projectId: string, riskId: string, mutator: (r: Risk) => Risk) => {
+      mutateProject(projectId, (p) => ({
+        ...p,
+        risks: p.risks.map((r) => (r.id === riskId ? refreshDerived(mutator(r)) : r)),
+      }));
+    },
+    [mutateProject]
+  );
+
+  const addRisk = useCallback(
+    (
+      projectId: string,
+      fields: {
+        title: string;
+        description?: string;
+        category: RiskCategory;
+        probability: 1 | 2 | 3 | 4 | 5;
+        impact: 1 | 2 | 3 | 4 | 5;
+        mitigation?: string;
+        ownerId?: string;
+        dueDate?: string;
+      }
+    ): Risk | null => {
+      const id = `R-${Date.now().toString(36)}`;
+      const now = new Date().toISOString();
+      const risk: Risk = refreshDerived({
+        id,
+        title: fields.title,
+        description: fields.description ?? "",
+        category: fields.category,
+        probability: fields.probability,
+        impact: fields.impact,
+        severity: deriveSeverity(fields.probability, fields.impact),
+        mitigation: fields.mitigation ?? "",
+        mitigationProgress: 0,
+        ownerId: fields.ownerId,
+        status: "Open",
+        dueDate: fields.dueDate,
+        createdAt: now,
+        updatedAt: now,
+        open: true,
+        likelihood: fields.probability / 5,
+        activity: [
+          {
+            id: `A-${id}-init`,
+            at: now,
+            actor: role,
+            kind: "created",
+            message: `Created risk "${fields.title}" (probability ${fields.probability}, impact ${fields.impact}).`,
+          },
+        ],
+      });
+      mutateProject(projectId, (p) => ({ ...p, risks: [...p.risks, risk] }));
+
+      // Notify the assignee on creation if one is set.
+      if (fields.ownerId) {
+        const owner = members.find((m) => m.id === fields.ownerId);
+        const project = data.find((p) => p.id === projectId);
+        if (owner && project) {
+          sendNotification({
+            kind: "approval-request",
+            from: "Risk Manager <riskmgr@portfolio.local>",
+            to: `${owner.name} <${owner.email}>`,
+            subject: `Risk assigned: ${fields.title} (${project.code})`,
+            body: `${owner.name},\n\nYou have been assigned a new ${risk.severity} risk on ${project.name}.\n\nTitle: ${fields.title}\nCategory: ${fields.category}\nProbability × Impact: ${fields.probability} × ${fields.impact} = ${fields.probability * fields.impact}\nMitigation plan: ${fields.mitigation || "—"}\n\nPlease open the risk register to review and act.\n\n— Portfolio Risk Manager`,
+            projectId,
+          });
+        }
+      }
+      return risk;
+    },
+    [members, data, mutateProject, role, sendNotification]
+  );
+
+  const updateRisk = useCallback(
+    (projectId: string, riskId: string, patch: Partial<Risk>) => {
+      mutateRisk(projectId, riskId, (r) => {
+        const changes: string[] = [];
+        if (patch.probability && patch.probability !== r.probability) changes.push(`probability ${r.probability}→${patch.probability}`);
+        if (patch.impact && patch.impact !== r.impact) changes.push(`impact ${r.impact}→${patch.impact}`);
+        if (patch.mitigation !== undefined && patch.mitigation !== r.mitigation) changes.push("mitigation plan updated");
+        if (patch.mitigationProgress !== undefined && patch.mitigationProgress !== r.mitigationProgress) changes.push(`progress ${r.mitigationProgress}%→${patch.mitigationProgress}%`);
+        if (patch.dueDate !== undefined && patch.dueDate !== r.dueDate) changes.push(`due date set to ${patch.dueDate || "—"}`);
+        if (patch.category && patch.category !== r.category) changes.push(`category ${r.category}→${patch.category}`);
+        if (patch.title && patch.title !== r.title) changes.push("title updated");
+        if (patch.description !== undefined && patch.description !== r.description) changes.push("description updated");
+        const next: Risk = {
+          ...r,
+          ...patch,
+          updatedAt: new Date().toISOString(),
+        };
+        if (changes.length > 0) {
+          next.activity = [...r.activity, {
+            id: `A-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+            at: next.updatedAt,
+            actor: role,
+            kind: "updated",
+            message: changes.join("; ") + ".",
+          }];
+        }
+        return next;
+      });
+    },
+    [mutateRisk, role]
+  );
+
+  const changeRiskStatus = useCallback(
+    (projectId: string, riskId: string, status: RiskStatus) => {
+      mutateRisk(projectId, riskId, (r) => {
+        if (r.status === status) return r;
+        return {
+          ...r,
+          status,
+          updatedAt: new Date().toISOString(),
+          activity: [...r.activity, {
+            id: `A-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+            at: new Date().toISOString(),
+            actor: role,
+            kind: "status-changed",
+            message: `Status changed: ${r.status} → ${status}.`,
+          }],
+        };
+      });
+    },
+    [mutateRisk, role]
+  );
+
+  const assignRisk = useCallback(
+    (projectId: string, riskId: string, memberId: string | undefined) => {
+      const member = memberId ? members.find((m) => m.id === memberId) : undefined;
+      const previousRisk = data.find((p) => p.id === projectId)?.risks.find((r) => r.id === riskId);
+      mutateRisk(projectId, riskId, (r) => {
+        if (r.ownerId === memberId) return r;
+        const prevName = r.ownerId ? members.find((m) => m.id === r.ownerId)?.name ?? "Unassigned" : "Unassigned";
+        const newName = member?.name ?? "Unassigned";
+        return {
+          ...r,
+          ownerId: memberId,
+          updatedAt: new Date().toISOString(),
+          activity: [...r.activity, {
+            id: `A-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+            at: new Date().toISOString(),
+            actor: role,
+            kind: "assigned",
+            message: `Owner changed: ${prevName} → ${newName}.`,
+          }],
+        };
+      });
+
+      // Notify the new assignee.
+      if (member && previousRisk && previousRisk.ownerId !== memberId) {
+        const project = data.find((p) => p.id === projectId);
+        if (project) {
+          sendNotification({
+            kind: "approval-request",
+            from: "Risk Manager <riskmgr@portfolio.local>",
+            to: `${member.name} <${member.email}>`,
+            subject: `Risk assigned: ${previousRisk.title} (${project.code})`,
+            body: `${member.name},\n\nYou are now the owner of a ${previousRisk.severity} risk on ${project.name}.\n\nTitle: ${previousRisk.title}\nCategory: ${previousRisk.category}\nStatus: ${previousRisk.status}\nMitigation plan: ${previousRisk.mitigation || "—"}\n\n— Portfolio Risk Manager`,
+            projectId,
+          });
+        }
+      }
+    },
+    [members, data, mutateRisk, role, sendNotification]
+  );
+
+  const addRiskComment = useCallback(
+    (projectId: string, riskId: string, text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      mutateRisk(projectId, riskId, (r) => ({
+        ...r,
+        updatedAt: new Date().toISOString(),
+        activity: [...r.activity, {
+          id: `A-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+          at: new Date().toISOString(),
+          actor: role,
+          kind: "comment",
+          message: trimmed,
+        }],
+      }));
+    },
+    [mutateRisk, role]
+  );
+
+  const softDeleteRisk = useCallback(
+    (projectId: string, riskId: string) => {
+      mutateRisk(projectId, riskId, (r) => ({
+        ...r,
+        deletedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        activity: [...r.activity, {
+          id: `A-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+          at: new Date().toISOString(),
+          actor: role,
+          kind: "deleted",
+          message: "Risk soft-deleted.",
+        }],
+      }));
+    },
+    [mutateRisk, role]
+  );
+
+  const restoreRisk = useCallback(
+    (projectId: string, riskId: string) => {
+      mutateRisk(projectId, riskId, (r) => ({
+        ...r,
+        deletedAt: undefined,
+        updatedAt: new Date().toISOString(),
+        activity: [...r.activity, {
+          id: `A-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+          at: new Date().toISOString(),
+          actor: role,
+          kind: "restored",
+          message: "Risk restored.",
+        }],
+      }));
+    },
+    [mutateRisk, role]
+  );
+
   const value: AppState = {
     role,
     setRole,
@@ -433,6 +681,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addProjectMember,
     updateProjectMemberRole,
     removeProjectMember,
+    addRisk,
+    updateRisk,
+    changeRiskStatus,
+    assignRisk,
+    addRiskComment,
+    softDeleteRisk,
+    restoreRisk,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

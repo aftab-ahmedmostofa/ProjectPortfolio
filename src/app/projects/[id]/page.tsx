@@ -181,24 +181,47 @@ export default function ProjectDetailPage() {
         </div>
 
         <div className="card p-4">
-          <h2 className="text-sm font-semibold text-slate-700">Risk Register</h2>
-          <div className="mt-3 space-y-2">
-            {project.risks.length === 0 ? (
-              <p className="text-sm text-slate-400">No open risks recorded.</p>
-            ) : (
-              project.risks.map((r) => (
-                <div key={r.id} className="rounded-lg border border-slate-100 p-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-700">{r.description}</span>
-                    <span className={`badge ${severityTone(r.severity)}`}>{r.severity}</span>
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    Likelihood {formatPercent(r.likelihood * 100)} · {r.open ? "Open" : "Closed"} · Mitigation: {r.mitigation}
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700">Risk Register</h2>
+            <Link href={`/projects/${project.id}/risks`} className="text-xs font-medium text-brand-600 hover:underline">
+              Open register →
+            </Link>
           </div>
+          {(() => {
+            const active = project.risks.filter((r) => !r.deletedAt && r.status !== "Closed");
+            const open = active.length;
+            const critical = active.filter((r) => r.severity === "Critical").length;
+            const high = active.filter((r) => r.severity === "High").length;
+            const top = [...active]
+              .sort((a, b) => b.probability * b.impact - a.probability * a.impact)
+              .slice(0, 3);
+            return (
+              <>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  <span className="badge bg-slate-100 text-slate-600">{open} open</span>
+                  {critical > 0 ? <span className="badge bg-rose-100 text-rose-700">{critical} critical</span> : null}
+                  {high > 0 ? <span className="badge bg-orange-100 text-orange-800">{high} high</span> : null}
+                </div>
+                <div className="mt-3 space-y-2">
+                  {top.length === 0 ? (
+                    <p className="text-sm text-slate-400">No active risks recorded.</p>
+                  ) : (
+                    top.map((r) => (
+                      <div key={r.id} className="rounded-lg border border-slate-100 p-2 text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-slate-700">{r.title}</span>
+                          <span className={`badge border ${severityTone(r.severity)}`}>{r.severity}</span>
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {r.category} · status {r.status} · P {r.probability} × I {r.impact}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
 

@@ -22,74 +22,87 @@ async function goto(path) {
   await page.goto(BASE + path, { waitUntil: "networkidle" });
 }
 
-async function send(text) {
-  const input = page.locator('input[placeholder*="Ask, search, create"]').first();
-  await input.fill(text);
-  await page.locator('form button:has-text("Send")').first().click();
-  await page.waitForTimeout(800);
-}
+// 1) Portfolio risk dashboard
+await goto("/risks");
+await shot("01-portfolio-risks");
 
-// 1) Dashboard with the floating chat bubble visible
-await goto("/");
-await shot("01-floating-bubble");
+// 2) Project-level risk register (Core Banking)
+await goto("/projects/PRJ-001/risks");
+await shot("02-project-risks");
 
-// 2) Open the bubble — small chat panel
-await page.click('button[aria-label="Open AI assistant"]');
+// 3) Open the Add risk form
+await page.click('button:has-text("+ Add risk")');
+await page.waitForTimeout(300);
+const form = page.locator('form:has-text("Mitigation plan")');
+await form.locator('input[placeholder="Concise risk statement"]').fill("Production cutover regression in payment authorisations");
+await form.locator('textarea[placeholder*="What could happen"]').fill("Risk that the new payments microservice rejects a subset of legitimate authorisations during the production cutover, causing customer-facing failures.");
+await form.locator('label:has-text("Category") select').selectOption("Technical");
+await form.locator('label:has-text("Probability") select').selectOption("4");
+await form.locator('label:has-text("Impact") select').selectOption("5");
+await form.locator('textarea[placeholder*="reduced or handled"]').fill("Dual-running the new service alongside legacy for 72h post-cutover with auto-rollback if authorisation success rate drops below 99.5%.");
+await form.locator('label:has-text("Owner") select').selectOption("M-001");
+await form.locator('label:has-text("Due date") input').fill("2026-06-30");
+await shot("03-add-risk-form");
+
+await form.locator('button:has-text("Add risk")').click();
+await page.waitForTimeout(500);
+await shot("04-after-add");
+
+// 4) Open the detail drawer for the newly-created risk
+await page.locator('table tbody tr', { hasText: "Production cutover regression" }).first().click();
+await page.waitForTimeout(500);
+await shot("05-risk-drawer");
+
+// 5) Inside the drawer: change status, post a comment, edit mitigation progress
+const drawerStatus = page.locator('aside section').filter({ hasText: "Status" }).first().locator('select').first();
+await drawerStatus.selectOption("In Progress");
+await page.waitForTimeout(300);
+
+// Set mitigation progress via React-aware value setter
+await page.evaluate(() => {
+  const sliders = document.querySelectorAll('aside input[type="range"]');
+  const slider = sliders[sliders.length - 1];
+  if (!slider) return;
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+  setter.call(slider, "60");
+  slider.dispatchEvent(new Event("input", { bubbles: true }));
+  slider.dispatchEvent(new Event("change", { bubbles: true }));
+  slider.dispatchEvent(new Event("mouseup", { bubbles: true }));
+});
+await page.waitForTimeout(300);
+
+await page.locator('aside textarea[placeholder*="Note progress"]').fill("Dual-run lab tests completed; production rehearsal scheduled for 25 Jun.");
+await page.locator('aside button:has-text("Post")').click();
 await page.waitForTimeout(400);
-await shot("02-floating-chat-open");
+await shot("06-risk-drawer-after-actions");
 
-// 3) Use the bubble: ask about Enterprise Data Lakehouse
-await page.locator('input[placeholder*="Ask, search, create"]').first().fill("Tell me about Enterprise Data Lakehouse");
-await page.locator('form button:has-text("Send")').first().click();
-await page.waitForTimeout(800);
-await shot("03-floating-chat-project-card");
+// 6) Close drawer via the X button (preserves React state via client-side nav)
+await page.locator('aside header button[aria-label="Close"]').click();
+await page.waitForTimeout(200);
 
-// Close floating, switch to the full assistant page
-await page.locator('button[aria-label="Close"]').first().click();
-await goto("/assistant");
-await shot("04-assistant-page");
+// 7) Click another seeded risk to demonstrate its drawer
+await page.locator('table tbody tr', { hasText: "Data migration integrity" }).first().click();
+await page.waitForTimeout(500);
+await shot("07-seeded-risk-detail");
 
-// 4) Inquiry intent
-await send("Tell me about AIOps Observability Platform");
-await shot("05-assistant-inquiry");
-
-// 5) Search / filter intent
-await send("Show high risk projects in UAE");
-await shot("06-assistant-filter");
-
-// 6) Create project
-await send("Create project Mobile Banking Modernization with budget 2.5M");
-await shot("07-assistant-create-project");
-
-// 7) Create sub-project
-await send("Create sub-project Card Issuance under Mobile Banking Modernization");
-await shot("08-assistant-create-subproject");
-
-// 8) Create task and sub-task
-await send("Create task Document new API in Core Banking due 2026-07-15");
-await page.waitForTimeout(400);
-await send("Add sub-task Confirm gateway sign-off to Document new API");
-await shot("09-assistant-tasks");
-
-// 9) Add member to directory
-await send("Add member Yusuf Karim email yusuf.karim@portfolio.local phone +971-50-321-9988 as Senior DevOps Engineer");
-await shot("10-assistant-add-member");
-
-// 10) Send email
-await send("Email Hind about Zero-Trust Security Program rollout progress");
-await shot("11-assistant-email");
-
-// 11) Click "Open /notifications →" in the email reply — client-side nav
-// preserves in-memory state (the bot-sent email and project-created notifs).
-await page.locator('a:has-text("Open /notifications")').last().click();
+// 8) Close drawer, then open inbox via bell → Inbox link (client-side).
+// This preserves the assignment notification fired on risk creation.
+await page.locator('aside header button[aria-label="Close"]').click();
+await page.waitForTimeout(200);
+await page.locator('header [aria-label="Notifications"]').click();
+await page.waitForTimeout(300);
+await page.locator('a:has-text("Inbox")').click();
 await page.waitForLoadState("networkidle");
-await shot("12-inbox-after-bot");
+await shot("08-risk-assignment-email");
 
-// 12) Navigate back to Projects via the sidebar (client-side) to see the
-// newly-created Mobile Banking project and Card Issuance sub-project.
-await page.locator('aside a:has-text("Projects")').click();
+// 9) Project detail summary panel now shows top open risks linking to register
+// Use sidebar nav (client-side); Projects link, then click Core Banking row
+await page.locator('aside nav a:has-text("Projects")').click();
 await page.waitForLoadState("networkidle");
-await shot("13-projects-after-bot-actions");
+await page.locator('a:has-text("Core Banking Modernization")').first().click();
+await page.waitForLoadState("networkidle");
+await page.evaluate(() => window.scrollTo(0, 1200));
+await shot("09-project-detail-risk-summary");
 
 await browser.close();
 console.log("done");
