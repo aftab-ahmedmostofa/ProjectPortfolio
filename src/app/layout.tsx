@@ -4,6 +4,7 @@ import { AppProvider } from "@/components/AppProvider";
 import { Sidebar } from "@/components/Sidebar";
 import { TopBar } from "@/components/TopBar";
 import { FilterBar } from "@/components/FilterBar";
+import { ChatBot } from "@/components/ChatBot";
 
 export const metadata: Metadata = {
   title: "AI Portfolio Dashboard",
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <main className="flex-1 px-6 py-6">{children}</main>
             </div>
           </div>
+          <ChatBot />
         </AppProvider>
       </body>
     </html>

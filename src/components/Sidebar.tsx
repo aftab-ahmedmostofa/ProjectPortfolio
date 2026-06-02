@@ -15,6 +15,7 @@ const NAV = [
   { href: "/alerts", label: "Alerts", icon: "!", badge: "alerts" as const },
   { href: "/watchlist", label: "Watchlist", icon: "★", badge: "watch" as const },
   { href: "/ai-insights", label: "AI Insights", icon: "✦", badge: "" as const },
+  { href: "/assistant", label: "Assistant", icon: "✦", badge: "" as const },
 ];
 
 export function Sidebar() {

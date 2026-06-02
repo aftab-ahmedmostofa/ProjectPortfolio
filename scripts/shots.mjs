@@ -22,68 +22,74 @@ async function goto(path) {
   await page.goto(BASE + path, { waitUntil: "networkidle" });
 }
 
-// 1) Members directory
-await goto("/members");
-await shot("01-members-directory");
-
-// 1b) Add a new member
-await page.click('button:has-text("Add member")');
-await page.fill('input[placeholder="Full name"]', "Yusuf Karim");
-await page.fill('input[placeholder="Email"]', "yusuf.karim@portfolio.local");
-await page.fill('input[placeholder="Contact number"]', "+971-50-321-9988");
-await page.fill('input[placeholder="Title (optional)"]', "Senior DevOps Engineer");
-await page.locator('form button:has-text("Add")').click();
-await page.waitForTimeout(400);
-await shot("02-members-after-add");
-
-// 2) Core Banking detail showing seeded members, sub-projects, tasks
-await goto("/projects/PRJ-001");
-await shot("03-project-detail-overview");
-
-// 2b) Add a member to the project
-await page.locator('h2:has-text("Project members") + button, button:has-text("+ Add member")').first().click();
-await page.waitForTimeout(200);
-await page.selectOption('select:has(option:has-text("Select a member"))', { index: 2 });
-await page.locator('form button:has-text("Add")').first().click();
-await page.waitForTimeout(400);
-
-// 2c) Add a top-level task
-await page.locator('button:has-text("+ Add task")').click();
-await page.locator('input[placeholder="Task title"]').fill("Brief steerco on cutover readiness");
-await page.locator('form input[type="date"]').fill("2026-06-20");
-await page.locator('form button:has-text("Add task")').click();
-await page.waitForTimeout(400);
-
-// 2d) Add a sub-task under the first existing task
-await page.locator('button:has-text("+ sub-task")').first().click();
-await page.locator('input[placeholder="Task title"]').fill("Confirm 3rd-party gateway sign-off");
-await page.locator('form button:has-text("Add task")').click();
-await page.waitForTimeout(400);
-
-// 2e) Create a sub-project
-await page.locator('button:has-text("+ Create sub-project")').click();
-await page.locator('input[placeholder="Sub-project name"]').fill("Data Migration Reconciliation");
-await page.locator('input[placeholder*="Short description"]').fill("Reconcile balances post-cutover.");
-await page.locator('input[placeholder*="Budget"], input[type="number"]').fill("600000");
-await page.locator('form button:has-text("Create")').click();
-await page.waitForTimeout(500);
-await shot("04-project-detail-with-additions");
-
-// 3) Show the freshly created sub-project page (parent breadcrumb)
-const subProjectLink = page.locator('a:has-text("Data Migration Reconciliation")').first();
-if (await subProjectLink.count()) {
-  await subProjectLink.click();
-  await page.waitForLoadState("networkidle");
-  await shot("05-subproject-detail");
+async function send(text) {
+  const input = page.locator('input[placeholder*="Ask, search, create"]').first();
+  await input.fill(text);
+  await page.locator('form button:has-text("Send")').first().click();
+  await page.waitForTimeout(800);
 }
 
-// 4) Seeded sub-project page (PRJ-001-A) - shows existing parent relationship and detail
-await goto("/projects/PRJ-001-A");
-await shot("06-seeded-subproject");
+// 1) Dashboard with the floating chat bubble visible
+await goto("/");
+await shot("01-floating-bubble");
 
-// 5) Projects list showing sub-project indentation
-await goto("/projects");
-await shot("07-projects-list-hierarchy");
+// 2) Open the bubble — small chat panel
+await page.click('button[aria-label="Open AI assistant"]');
+await page.waitForTimeout(400);
+await shot("02-floating-chat-open");
+
+// 3) Use the bubble: ask about Enterprise Data Lakehouse
+await page.locator('input[placeholder*="Ask, search, create"]').first().fill("Tell me about Enterprise Data Lakehouse");
+await page.locator('form button:has-text("Send")').first().click();
+await page.waitForTimeout(800);
+await shot("03-floating-chat-project-card");
+
+// Close floating, switch to the full assistant page
+await page.locator('button[aria-label="Close"]').first().click();
+await goto("/assistant");
+await shot("04-assistant-page");
+
+// 4) Inquiry intent
+await send("Tell me about AIOps Observability Platform");
+await shot("05-assistant-inquiry");
+
+// 5) Search / filter intent
+await send("Show high risk projects in UAE");
+await shot("06-assistant-filter");
+
+// 6) Create project
+await send("Create project Mobile Banking Modernization with budget 2.5M");
+await shot("07-assistant-create-project");
+
+// 7) Create sub-project
+await send("Create sub-project Card Issuance under Mobile Banking Modernization");
+await shot("08-assistant-create-subproject");
+
+// 8) Create task and sub-task
+await send("Create task Document new API in Core Banking due 2026-07-15");
+await page.waitForTimeout(400);
+await send("Add sub-task Confirm gateway sign-off to Document new API");
+await shot("09-assistant-tasks");
+
+// 9) Add member to directory
+await send("Add member Yusuf Karim email yusuf.karim@portfolio.local phone +971-50-321-9988 as Senior DevOps Engineer");
+await shot("10-assistant-add-member");
+
+// 10) Send email
+await send("Email Hind about Zero-Trust Security Program rollout progress");
+await shot("11-assistant-email");
+
+// 11) Click "Open /notifications →" in the email reply — client-side nav
+// preserves in-memory state (the bot-sent email and project-created notifs).
+await page.locator('a:has-text("Open /notifications")').last().click();
+await page.waitForLoadState("networkidle");
+await shot("12-inbox-after-bot");
+
+// 12) Navigate back to Projects via the sidebar (client-side) to see the
+// newly-created Mobile Banking project and Card Issuance sub-project.
+await page.locator('aside a:has-text("Projects")').click();
+await page.waitForLoadState("networkidle");
+await shot("13-projects-after-bot-actions");
 
 await browser.close();
 console.log("done");
