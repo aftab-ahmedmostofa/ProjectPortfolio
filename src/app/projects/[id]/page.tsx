@@ -6,6 +6,9 @@ import { useApp } from "@/components/AppProvider";
 import { StatusBadge, RiskBadge, DecisionBadge, ProgressBar } from "@/components/ui";
 import { WatchToggle } from "@/components/WatchToggle";
 import { ProjectTimeline } from "@/components/Timeline";
+import { ProjectMembersSection } from "@/components/ProjectMembersSection";
+import { ProjectTasksSection } from "@/components/ProjectTasksSection";
+import { ProjectSubprojectsSection } from "@/components/ProjectSubprojectsSection";
 import {
   assessRisk,
   forecastCost,
@@ -35,12 +38,21 @@ export default function ProjectDetailPage() {
   const cost = forecastCost(project);
   const schedule = forecastSchedule(project);
   const risk = assessRisk(project);
+  const parent = project.parentProjectId ? allProjects.find((p) => p.id === project.parentProjectId) : undefined;
 
   return (
     <div className="space-y-5">
-      <Link href="/projects" className="text-sm text-brand-600 hover:underline">
-        ← Projects
-      </Link>
+      <div className="flex items-center gap-3 text-sm">
+        <Link href="/projects" className="text-brand-600 hover:underline">← Projects</Link>
+        {parent ? (
+          <span className="text-slate-400">
+            · sub-project of{" "}
+            <Link href={`/projects/${parent.id}`} className="text-brand-600 hover:underline">
+              {parent.name}
+            </Link>
+          </span>
+        ) : null}
+      </div>
 
       <div className="card p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -189,6 +201,13 @@ export default function ProjectDetailPage() {
           </div>
         </div>
       </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ProjectMembersSection project={project} />
+        <ProjectSubprojectsSection project={project} />
+      </div>
+
+      <ProjectTasksSection project={project} />
 
       <div className="card p-4">
         <h2 className="text-sm font-semibold text-slate-700">Approval Trail</h2>

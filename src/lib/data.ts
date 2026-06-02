@@ -1,11 +1,32 @@
-import { Project } from "./types";
+import { Project, Member, ProjectMembership, Task } from "./types";
 
 // Reference "today" for the demo dataset.
 export const TODAY = new Date("2026-05-28T00:00:00Z");
 
+// Global member directory (HR / Active Directory in production).
+export const seedMembers: Member[] = [
+  { id: "M-001", name: "Layla Hassan", email: "layla.hassan@portfolio.local", phone: "+971-50-111-2233", title: "Senior Programme Manager" },
+  { id: "M-002", name: "Omar Al-Farsi", email: "omar.alfarsi@portfolio.local", phone: "+966-55-222-3344", title: "Data Platform Lead" },
+  { id: "M-003", name: "Nourhan Adel", email: "nourhan.adel@portfolio.local", phone: "+20-100-333-4455", title: "CX Product Manager" },
+  { id: "M-004", name: "James Whitfield", email: "james.whitfield@portfolio.local", phone: "+44-20-7444-5566", title: "Risk & Compliance Lead" },
+  { id: "M-005", name: "Priya Nair", email: "priya.nair@portfolio.local", phone: "+91-80-555-6677", title: "AIOps Engineering Manager" },
+  { id: "M-006", name: "Wei Chen", email: "wei.chen@portfolio.local", phone: "+65-9666-7788", title: "Payments Programme Director" },
+  { id: "M-007", name: "Fatima Noor", email: "fatima.noor@portfolio.local", phone: "+971-50-777-8899", title: "HR Analytics Lead" },
+  { id: "M-008", name: "Khalid Mansour", email: "khalid.mansour@portfolio.local", phone: "+966-55-888-9900", title: "Facilities Director" },
+  { id: "M-009", name: "Sophie Bennett", email: "sophie.bennett@portfolio.local", phone: "+44-20-9999-0011", title: "ESG Reporting Lead" },
+  { id: "M-010", name: "Arjun Mehta", email: "arjun.mehta@portfolio.local", phone: "+91-80-1010-2020", title: "Applied AI Lead" },
+  { id: "M-011", name: "Grace Lim", email: "grace.lim@portfolio.local", phone: "+65-9111-3030", title: "Cloud Architect" },
+  { id: "M-012", name: "Hind Saleh", email: "hind.saleh@portfolio.local", phone: "+971-50-444-5050", title: "Zero-Trust Programme Lead" },
+  { id: "M-013", name: "Daniel Cole", email: "daniel.cole@portfolio.local", phone: "+44-20-2222-7070", title: "Marketing Technology Lead" },
+  { id: "M-014", name: "Sara Iqbal", email: "sara.iqbal@portfolio.local", phone: "+971-50-808-9090", title: "PMO Analyst" },
+  { id: "M-015", name: "Marco Bianchi", email: "marco.bianchi@portfolio.local", phone: "+39-02-9090-1010", title: "Solution Architect" },
+];
+
+const m = (memberId: string, role: ProjectMembership["role"] = "Contributor"): ProjectMembership => ({ memberId, role });
+
 // Self-contained seed portfolio. In production this layer would be replaced by
 // ERP / PMO integrations (see README "Integration Requirements").
-export const projects: Project[] = [
+const rawProjects: Array<Omit<Project, "members" | "tasks" | "parentProjectId"> & Partial<Pick<Project, "members" | "tasks" | "parentProjectId">>> = [
   {
     id: "PRJ-001",
     code: "DXB-CORE",
@@ -409,4 +430,103 @@ export const projects: Project[] = [
       { level: 1, role: "PMO", approver: "PMO Board", decision: "Approved", decidedAt: "2024-09-20" },
     ],
   },
+  // ---- Sub-projects ----
+  {
+    id: "PRJ-001-A",
+    code: "DXB-PAY",
+    name: "Payments Cutover (sub-programme)",
+    description: "Sub-programme delivering the payments cutover stream under Core Banking Modernization.",
+    subsidiary: "Gulf Holdings",
+    businessUnit: "Digital",
+    country: "UAE",
+    manager: "Sara Iqbal",
+    status: "In Progress",
+    priority: "High",
+    budget: 800000,
+    actualCost: 540000,
+    progress: 48,
+    startDate: "2025-06-01",
+    plannedEndDate: "2026-04-30",
+    milestones: [
+      { id: "M1", name: "Sandbox cutover", dueDate: "2025-12-31", status: "Done", completion: 100 },
+      { id: "M2", name: "Pilot wave", dueDate: "2026-02-28", status: "Done", completion: 100 },
+      { id: "M3", name: "Production cutover", dueDate: "2026-04-30", status: "In Progress", completion: 35 },
+    ],
+    risks: [
+      { id: "R1", description: "Cutover window conflicts with month-end batch", severity: "High", likelihood: 0.4, mitigation: "Schedule for first Sunday of month", open: true },
+    ],
+    approvals: [
+      { level: 1, role: "PMO", approver: "PMO Board", decision: "Approved", decidedAt: "2025-05-10" },
+    ],
+    parentProjectId: "PRJ-001",
+    members: [m("M-014", "Manager"), m("M-001", "Sponsor")],
+  },
+  {
+    id: "PRJ-005-A",
+    code: "BLR-AIOPS-RUN",
+    name: "Auto-Remediation Runbooks (sub-stream)",
+    description: "Sub-stream automating top-N incident remediations within AIOps Observability.",
+    subsidiary: "Asia Pacific Co",
+    businessUnit: "Infrastructure",
+    country: "India",
+    manager: "Priya Nair",
+    status: "Planning",
+    priority: "Medium",
+    budget: 300000,
+    actualCost: 35000,
+    progress: 10,
+    startDate: "2026-03-01",
+    plannedEndDate: "2026-09-30",
+    milestones: [
+      { id: "M1", name: "Top-5 incidents shortlist", dueDate: "2026-04-30", status: "Done", completion: 100 },
+      { id: "M2", name: "Runbook automation", dueDate: "2026-08-31", status: "In Progress", completion: 20 },
+    ],
+    risks: [],
+    approvals: [
+      { level: 1, role: "PMO", approver: "PMO Board", decision: "Pending" },
+    ],
+    parentProjectId: "PRJ-005",
+    members: [m("M-005", "Sponsor"), m("M-011", "Manager")],
+  },
 ];
+
+// Seeded project members for a subset of the portfolio. Production reads from HR.
+const seededMembers: Record<string, ProjectMembership[]> = {
+  "PRJ-001": [m("M-001", "Manager"), m("M-014", "Contributor"), m("M-006", "Sponsor"), m("M-015", "Contributor")],
+  "PRJ-002": [m("M-002", "Manager"), m("M-014", "Reviewer")],
+  "PRJ-003": [m("M-003", "Manager"), m("M-013", "Contributor")],
+  "PRJ-004": [m("M-004", "Manager"), m("M-009", "Reviewer")],
+  "PRJ-005": [m("M-005", "Manager"), m("M-010", "Contributor"), m("M-011", "Reviewer")],
+  "PRJ-006": [m("M-006", "Manager")],
+  "PRJ-007": [m("M-007", "Manager"), m("M-014", "Contributor")],
+  "PRJ-008": [m("M-008", "Manager")],
+  "PRJ-009": [m("M-009", "Manager"), m("M-004", "Reviewer")],
+  "PRJ-010": [m("M-010", "Manager"), m("M-005", "Reviewer")],
+  "PRJ-011": [m("M-011", "Manager"), m("M-015", "Contributor")],
+  "PRJ-012": [m("M-014", "Manager")],
+  "PRJ-013": [m("M-012", "Manager"), m("M-014", "Contributor")],
+  "PRJ-014": [m("M-013", "Manager"), m("M-009", "Reviewer")],
+};
+
+// Seeded tasks for two projects to demonstrate sub-task hierarchy.
+const seededTasks: Record<string, Task[]> = {
+  "PRJ-001": [
+    { id: "T-001", projectId: "PRJ-001", title: "Finalize payments cutover runbook", status: "In Progress", priority: "High", assigneeId: "M-001", dueDate: "2026-06-15", createdAt: "2026-05-01" },
+    { id: "T-002", projectId: "PRJ-001", parentTaskId: "T-001", title: "Document rollback procedure", status: "Todo", priority: "High", assigneeId: "M-015", dueDate: "2026-06-10", createdAt: "2026-05-05" },
+    { id: "T-003", projectId: "PRJ-001", parentTaskId: "T-001", title: "Dry-run rehearsal with operations", status: "Todo", priority: "Medium", assigneeId: "M-006", dueDate: "2026-06-12", createdAt: "2026-05-05" },
+    { id: "T-004", projectId: "PRJ-001", title: "Legacy decommissioning inventory", status: "Todo", priority: "Medium", assigneeId: "M-014", dueDate: "2026-07-01", createdAt: "2026-05-10" },
+    { id: "T-005", projectId: "PRJ-001", title: "Reconciliation report sign-off", status: "Done", priority: "Medium", assigneeId: "M-001", dueDate: "2026-04-30", createdAt: "2026-03-15" },
+  ],
+  "PRJ-005": [
+    { id: "T-101", projectId: "PRJ-005", title: "Reduce false-positive rate on anomaly model", status: "In Progress", priority: "High", assigneeId: "M-005", dueDate: "2026-06-30", createdAt: "2026-05-01" },
+    { id: "T-102", projectId: "PRJ-005", parentTaskId: "T-101", title: "Label 500 incidents for training set", status: "In Progress", priority: "Medium", assigneeId: "M-010", dueDate: "2026-06-15", createdAt: "2026-05-05" },
+    { id: "T-103", projectId: "PRJ-005", title: "Implement top-5 auto-remediation runbooks", status: "Todo", priority: "High", assigneeId: "M-011", dueDate: "2026-07-15", createdAt: "2026-05-10" },
+    { id: "T-104", projectId: "PRJ-005", title: "Cloud cost-control dashboard", status: "Blocked", priority: "Medium", assigneeId: "M-011", dueDate: "2026-07-31", createdAt: "2026-05-15" },
+  ],
+};
+
+export const projects: Project[] = rawProjects.map((p) => ({
+  ...p,
+  members: p.members ?? seededMembers[p.id] ?? [],
+  tasks: p.tasks ?? seededTasks[p.id] ?? [],
+}));

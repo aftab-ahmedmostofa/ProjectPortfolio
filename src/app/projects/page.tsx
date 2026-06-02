@@ -65,9 +65,13 @@ export default function ProjectsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <Link href={`/projects/${p.id}`} className="font-medium text-brand-700 hover:underline">
+                      {p.parentProjectId ? <span className="text-slate-400">↳ </span> : null}
                       {p.name}
                     </Link>
-                    <div className="text-xs text-slate-400">{p.code} · {p.businessUnit}</div>
+                    <div className="text-xs text-slate-400">
+                      {p.code} · {p.businessUnit}
+                      {p.parentProjectId ? <span className="ml-1 text-slate-400">· sub</span> : null}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {p.subsidiary}
@@ -138,6 +142,8 @@ function RegisterForm({ onCreate }: { onCreate: (p: Project) => void }) {
         { level: 1, role: "PMO", approver: "PMO Board", decision: "Pending" },
         { level: 2, role: "CDO Office", approver: "Chief Digital Office", decision: "Pending" },
       ],
+      members: [],
+      tasks: [],
     });
   }
 

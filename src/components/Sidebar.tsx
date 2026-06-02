@@ -10,6 +10,7 @@ const NAV = [
   { href: "/", label: "Dashboard", icon: "▦", badge: "" as const },
   { href: "/projects", label: "Projects", icon: "▤", badge: "" as const },
   { href: "/timeline", label: "Timeline", icon: "▭", badge: "" as const },
+  { href: "/members", label: "Members", icon: "◔", badge: "" as const },
   { href: "/approvals", label: "Approvals", icon: "✓", badge: "approvals" as const },
   { href: "/alerts", label: "Alerts", icon: "!", badge: "alerts" as const },
   { href: "/watchlist", label: "Watchlist", icon: "★", badge: "watch" as const },

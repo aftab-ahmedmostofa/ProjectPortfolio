@@ -7,13 +7,13 @@ mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext({
-  viewport: { width: 1440, height: 900 },
+  viewport: { width: 1440, height: 1100 },
   deviceScaleFactor: 2,
 });
 const page = await ctx.newPage();
 
 async function shot(name) {
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(700);
   await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
   console.log("captured", name);
 }
@@ -22,64 +22,68 @@ async function goto(path) {
   await page.goto(BASE + path, { waitUntil: "networkidle" });
 }
 
-// Dashboard, default
-await goto("/");
-await shot("01-dashboard");
+// 1) Members directory
+await goto("/members");
+await shot("01-members-directory");
 
-// Open the Country multi-select, tick UAE + Saudi Arabia + UK; screenshot the open menu
-await page.click('button:has-text("Country")');
-await page.waitForTimeout(300);
-await page.click('label:has-text("UAE") input');
-await page.click('label:has-text("Saudi Arabia") input');
-await page.click('label:has-text("UK") input');
-await page.waitForTimeout(300);
-await shot("02-multiselect-open");
-// Close popover by clicking outside
-await page.mouse.click(900, 100);
-await shot("03-dashboard-multi-country");
-
-// Reset filters and visit timeline
-await page.click('button:has-text("Reset filters")');
-await goto("/timeline");
-await shot("04-timeline");
-
-// Per-project timeline with alerts (PRJ-002 = Enterprise Data Lakehouse, delayed)
-await goto("/projects/PRJ-002");
-await shot("05-project-detail-timeline");
-
-// Alerts page
-await goto("/alerts");
-await shot("06-alerts");
-
-// Watchlist: star a couple of projects via the projects table, then visit /watchlist
-await goto("/projects");
-await page.locator('table tbody tr button[aria-label*="watchlist"]').nth(0).click();
-await page.locator('table tbody tr button[aria-label*="watchlist"]').nth(1).click();
-await page.locator('table tbody tr button[aria-label*="watchlist"]').nth(4).click();
-await page.waitForTimeout(200);
-await goto("/watchlist");
-await shot("07-watchlist");
-
-// Approvals: act on one pending approval as Admin → triggers notifications
-await goto("/approvals");
-const goButton = page.locator('button:has-text("Go")').first();
-if (await goButton.count() > 0) {
-  await page.locator('input[placeholder*="Comment"]').first().fill("Approved — aligned to FY plan.");
-  await goButton.click();
-  await page.waitForTimeout(500);
-}
-await shot("08-approvals-acted");
-
-// Open the notifications bell
-await page.locator('button[aria-label="Notifications"]').click();
+// 1b) Add a new member
+await page.click('button:has-text("Add member")');
+await page.fill('input[placeholder="Full name"]', "Yusuf Karim");
+await page.fill('input[placeholder="Email"]', "yusuf.karim@portfolio.local");
+await page.fill('input[placeholder="Contact number"]', "+971-50-321-9988");
+await page.fill('input[placeholder="Title (optional)"]', "Senior DevOps Engineer");
+await page.locator('form button:has-text("Add")').click();
 await page.waitForTimeout(400);
-await shot("09-notifications-bell");
+await shot("02-members-after-add");
 
-// Click the bell's "Inbox →" link — client-side nav preserves the in-memory
-// notifications state (page.goto would hard-reload and wipe it).
-await page.locator('a:has-text("Inbox")').click();
-await page.waitForLoadState("networkidle");
-await shot("10-notifications-inbox");
+// 2) Core Banking detail showing seeded members, sub-projects, tasks
+await goto("/projects/PRJ-001");
+await shot("03-project-detail-overview");
+
+// 2b) Add a member to the project
+await page.locator('h2:has-text("Project members") + button, button:has-text("+ Add member")').first().click();
+await page.waitForTimeout(200);
+await page.selectOption('select:has(option:has-text("Select a member"))', { index: 2 });
+await page.locator('form button:has-text("Add")').first().click();
+await page.waitForTimeout(400);
+
+// 2c) Add a top-level task
+await page.locator('button:has-text("+ Add task")').click();
+await page.locator('input[placeholder="Task title"]').fill("Brief steerco on cutover readiness");
+await page.locator('form input[type="date"]').fill("2026-06-20");
+await page.locator('form button:has-text("Add task")').click();
+await page.waitForTimeout(400);
+
+// 2d) Add a sub-task under the first existing task
+await page.locator('button:has-text("+ sub-task")').first().click();
+await page.locator('input[placeholder="Task title"]').fill("Confirm 3rd-party gateway sign-off");
+await page.locator('form button:has-text("Add task")').click();
+await page.waitForTimeout(400);
+
+// 2e) Create a sub-project
+await page.locator('button:has-text("+ Create sub-project")').click();
+await page.locator('input[placeholder="Sub-project name"]').fill("Data Migration Reconciliation");
+await page.locator('input[placeholder*="Short description"]').fill("Reconcile balances post-cutover.");
+await page.locator('input[placeholder*="Budget"], input[type="number"]').fill("600000");
+await page.locator('form button:has-text("Create")').click();
+await page.waitForTimeout(500);
+await shot("04-project-detail-with-additions");
+
+// 3) Show the freshly created sub-project page (parent breadcrumb)
+const subProjectLink = page.locator('a:has-text("Data Migration Reconciliation")').first();
+if (await subProjectLink.count()) {
+  await subProjectLink.click();
+  await page.waitForLoadState("networkidle");
+  await shot("05-subproject-detail");
+}
+
+// 4) Seeded sub-project page (PRJ-001-A) - shows existing parent relationship and detail
+await goto("/projects/PRJ-001-A");
+await shot("06-seeded-subproject");
+
+// 5) Projects list showing sub-project indentation
+await goto("/projects");
+await shot("07-projects-list-hierarchy");
 
 await browser.close();
 console.log("done");

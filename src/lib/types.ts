@@ -47,6 +47,35 @@ export interface ApprovalStep {
   decidedAt?: string; // ISO date
 }
 
+export interface Member {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  title?: string;
+}
+
+export type MembershipRole = "Sponsor" | "Manager" | "Contributor" | "Reviewer";
+
+export interface ProjectMembership {
+  memberId: string;
+  role: MembershipRole;
+}
+
+export type TaskStatus = "Todo" | "In Progress" | "Done" | "Blocked";
+
+export interface Task {
+  id: string;
+  projectId: string;
+  parentTaskId?: string;
+  title: string;
+  status: TaskStatus;
+  priority: "Low" | "Medium" | "High";
+  assigneeId?: string;
+  dueDate?: string; // ISO yyyy-mm-dd
+  createdAt: string; // ISO
+}
+
 export interface Project {
   id: string;
   code: string;
@@ -58,14 +87,17 @@ export interface Project {
   manager: string;
   status: ProjectStatus;
   priority: "Low" | "Medium" | "High";
-  budget: number; // approved budget
-  actualCost: number; // cost incurred to date
-  progress: number; // 0..100 physical completion
-  startDate: string; // ISO
-  plannedEndDate: string; // ISO
+  budget: number;
+  actualCost: number;
+  progress: number;
+  startDate: string;
+  plannedEndDate: string;
   milestones: Milestone[];
   risks: Risk[];
   approvals: ApprovalStep[];
+  parentProjectId?: string;
+  members: ProjectMembership[];
+  tasks: Task[];
 }
 
 export type RiskLevel = "Low" | "Medium" | "High";
