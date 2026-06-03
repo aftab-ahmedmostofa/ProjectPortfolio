@@ -3,11 +3,17 @@
 import Link from "next/link";
 import { useApp } from "@/components/AppProvider";
 import { KpiCard } from "@/components/KpiCard";
-import { StatusDonut, BudgetBySubsidiary, RiskByBusinessUnit } from "@/components/Charts";
-import { CountryHeatmap } from "@/components/CountryHeatmap";
+import {
+  StatusDistributionChart,
+  BudgetSubsidiaryChart,
+  RiskByBuChart,
+  CountryRiskChart,
+  DeliveryPipelineChart,
+} from "@/components/dashboard/DashCharts";
 import { TopAtRiskPanel } from "@/components/TopAtRiskPanel";
 import { ApprovalQueueWidget } from "@/components/ApprovalQueueWidget";
-import { DeliveryPipeline } from "@/components/DeliveryPipeline";
+import { ChartTypeSelector, ChartKind } from "@/components/pm/ChartTypeSelector";
+import { useChartKind } from "@/components/pm/useChartKind";
 import {
   portfolioKpis,
   executiveInsights,
@@ -32,6 +38,12 @@ export default function DashboardPage() {
 
   const alertCounts = alertSeverityCounts(evaluateAlerts(projects));
   const totalAlerts = alertCounts.critical + alertCounts.warn + alertCounts.info;
+
+  const [budgetKind, setBudgetKind] = useChartKind("dash.budget", "bars");
+  const [statusKind, setStatusKind] = useChartKind("dash.status", "donut");
+  const [countryKind, setCountryKind] = useChartKind("dash.country", "heatmap");
+  const [riskBuKind, setRiskBuKind] = useChartKind("dash.riskbu", "bar");
+  const [pipelineKind, setPipelineKind] = useChartKind("dash.pipeline", "bar");
 
   return (
     <div className="space-y-6">
@@ -112,31 +124,49 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <div className="card p-4 lg:col-span-2">
-          <SectionTitle>Budget vs Actual vs AI Forecast</SectionTitle>
-          <p className="text-xs text-slate-500">Totals by subsidiary, in $M.</p>
-          <BudgetBySubsidiary projects={projects} />
-        </div>
-        <div className="card p-4">
-          <SectionTitle>Status Distribution</SectionTitle>
-          <p className="text-xs text-slate-500">Count of projects by lifecycle stage.</p>
-          <StatusDonut projects={projects} />
-        </div>
+        <ChartPanel
+          title="Budget vs Actual vs AI Forecast"
+          sub="Totals by subsidiary, in $M."
+          colSpan={2}
+          kind={budgetKind}
+          onKindChange={setBudgetKind}
+          options={["bars", "line", "area", "treemap"]}
+        >
+          <BudgetSubsidiaryChart projects={projects} kind={budgetKind} />
+        </ChartPanel>
+
+        <ChartPanel
+          title="Status Distribution"
+          sub="Count of projects by lifecycle stage."
+          kind={statusKind}
+          onKindChange={setStatusKind}
+          options={["donut", "pie", "bar", "treemap"]}
+        >
+          <StatusDistributionChart projects={projects} kind={statusKind} />
+        </ChartPanel>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <div className="card p-4 lg:col-span-2">
-          <SectionTitle>Country Risk Heatmap</SectionTitle>
-          <p className="text-xs text-slate-500">Average AI risk score by country.</p>
-          <div className="mt-3">
-            <CountryHeatmap projects={projects} />
-          </div>
-        </div>
-        <div className="card p-4">
-          <SectionTitle>Avg Risk by Business Unit</SectionTitle>
-          <p className="text-xs text-slate-500">Composite 0–100 score.</p>
-          <RiskByBusinessUnit projects={projects} />
-        </div>
+        <ChartPanel
+          title="Country Risk"
+          sub="Average AI risk score by country."
+          colSpan={2}
+          kind={countryKind}
+          onKindChange={setCountryKind}
+          options={["heatmap", "bar", "treemap"]}
+        >
+          <CountryRiskChart projects={projects} kind={countryKind} />
+        </ChartPanel>
+
+        <ChartPanel
+          title="Avg Risk by Business Unit"
+          sub="Composite 0–100 score."
+          kind={riskBuKind}
+          onKindChange={setRiskBuKind}
+          options={["bar", "lollipop", "donut", "treemap"]}
+        >
+          <RiskByBuChart projects={projects} kind={riskBuKind} />
+        </ChartPanel>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
@@ -147,11 +177,15 @@ export default function DashboardPage() {
             <TopAtRiskPanel projects={projects} />
           </div>
         </div>
-        <div className="card p-4">
-          <SectionTitle>Delivery Pipeline</SectionTitle>
-          <p className="text-xs text-slate-500">Projects ending per quarter.</p>
-          <DeliveryPipeline projects={projects} />
-        </div>
+        <ChartPanel
+          title="Delivery Pipeline"
+          sub="Projects ending per quarter."
+          kind={pipelineKind}
+          onKindChange={setPipelineKind}
+          options={["bar", "line", "area", "lollipop"]}
+        >
+          <DeliveryPipelineChart projects={projects} kind={pipelineKind} />
+        </ChartPanel>
         <div className="card p-4">
           <SectionTitle>Approval Queue</SectionTitle>
           <p className="text-xs text-slate-500">Multi-level Go / No-Go gates.</p>
@@ -183,4 +217,35 @@ export default function DashboardPage() {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="text-sm font-semibold text-slate-700">{children}</h2>;
+}
+
+function ChartPanel({
+  title,
+  sub,
+  colSpan,
+  kind,
+  onKindChange,
+  options,
+  children,
+}: {
+  title: string;
+  sub?: string;
+  colSpan?: number;
+  kind: ChartKind;
+  onKindChange: (k: ChartKind) => void;
+  options: ChartKind[];
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`card p-4 ${colSpan === 2 ? "lg:col-span-2" : ""}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <SectionTitle>{title}</SectionTitle>
+          {sub ? <p className="text-xs text-slate-500">{sub}</p> : null}
+        </div>
+        <ChartTypeSelector options={options} value={kind} onChange={onKindChange} />
+      </div>
+      <div className="mt-3">{children}</div>
+    </div>
+  );
 }

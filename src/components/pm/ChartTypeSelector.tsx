@@ -11,7 +11,8 @@ export type ChartKind =
   | "bars" // grouped bars
   | "scatter"
   | "v-lollipop"
-  | "v-bar";
+  | "v-bar"
+  | "heatmap";
 
 const ICONS: Record<ChartKind, React.ReactNode> = {
   bar: (
@@ -93,6 +94,19 @@ const ICONS: Record<ChartKind, React.ReactNode> = {
       <rect x="11" y="9" width="3" height="6" fill="currentColor" />
     </svg>
   ),
+  heatmap: (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5">
+      <rect x="1" y="1" width="4" height="4" fill="currentColor" opacity="0.4" />
+      <rect x="6" y="1" width="4" height="4" fill="currentColor" opacity="0.7" />
+      <rect x="11" y="1" width="4" height="4" fill="currentColor" />
+      <rect x="1" y="6" width="4" height="4" fill="currentColor" opacity="0.7" />
+      <rect x="6" y="6" width="4" height="4" fill="currentColor" />
+      <rect x="11" y="6" width="4" height="4" fill="currentColor" opacity="0.4" />
+      <rect x="1" y="11" width="4" height="4" fill="currentColor" />
+      <rect x="6" y="11" width="4" height="4" fill="currentColor" opacity="0.4" />
+      <rect x="11" y="11" width="4" height="4" fill="currentColor" opacity="0.7" />
+    </svg>
+  ),
 };
 
 const LABEL: Record<ChartKind, string> = {
@@ -107,6 +121,7 @@ const LABEL: Record<ChartKind, string> = {
   scatter: "Scatter",
   "v-lollipop": "Vertical lollipop",
   "v-bar": "Vertical bar",
+  heatmap: "Heatmap",
 };
 
 export function ChartTypeSelector({
