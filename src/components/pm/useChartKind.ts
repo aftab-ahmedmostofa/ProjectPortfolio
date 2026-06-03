@@ -26,14 +26,24 @@ function saveAll(map: Record<string, ChartKind>) {
 
 // Hook: keeps the panel's chart type in component state and persists to
 // localStorage so the user's choice survives reloads / navigation.
-export function useChartKind(panelId: string, defaultKind: ChartKind): [ChartKind, (k: ChartKind) => void] {
+// `allowedKinds` is optional but recommended — if a stored value isn't in
+// the panel's allow-list we ignore it and use the default. That prevents a
+// panel from going blank when a previously-stored kind no longer applies
+// (e.g. after a refactor that changed the chart's available variants).
+export function useChartKind(
+  panelId: string,
+  defaultKind: ChartKind,
+  allowedKinds?: readonly ChartKind[]
+): [ChartKind, (k: ChartKind) => void] {
   const [kind, setKind] = useState<ChartKind>(defaultKind);
 
   // Hydrate from localStorage after mount (avoid SSR mismatch).
   useEffect(() => {
     const stored = loadAll()[panelId];
-    if (stored) setKind(stored);
-  }, [panelId]);
+    if (!stored) return;
+    if (allowedKinds && !allowedKinds.includes(stored)) return;
+    setKind(stored);
+  }, [panelId, allowedKinds]);
 
   const update = (k: ChartKind) => {
     setKind(k);

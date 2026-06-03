@@ -22,6 +22,12 @@ import {
 import { evaluateAlerts, alertSeverityCounts } from "@/lib/alerts";
 import { formatCurrency, formatPercent } from "@/lib/format";
 
+const BUDGET_OPTIONS = ["bars", "line", "area", "treemap"] as const satisfies readonly ChartKind[];
+const STATUS_OPTIONS = ["donut", "pie", "bar", "treemap"] as const satisfies readonly ChartKind[];
+const COUNTRY_OPTIONS = ["heatmap", "bar", "treemap"] as const satisfies readonly ChartKind[];
+const RISKBU_OPTIONS = ["bar", "lollipop", "donut", "treemap"] as const satisfies readonly ChartKind[];
+const PIPELINE_OPTIONS = ["bar", "line", "area", "lollipop"] as const satisfies readonly ChartKind[];
+
 export default function DashboardPage() {
   const { projects } = useApp();
   const kpis = portfolioKpis(projects);
@@ -39,11 +45,11 @@ export default function DashboardPage() {
   const alertCounts = alertSeverityCounts(evaluateAlerts(projects));
   const totalAlerts = alertCounts.critical + alertCounts.warn + alertCounts.info;
 
-  const [budgetKind, setBudgetKind] = useChartKind("dash.budget", "bars");
-  const [statusKind, setStatusKind] = useChartKind("dash.status", "donut");
-  const [countryKind, setCountryKind] = useChartKind("dash.country", "heatmap");
-  const [riskBuKind, setRiskBuKind] = useChartKind("dash.riskbu", "bar");
-  const [pipelineKind, setPipelineKind] = useChartKind("dash.pipeline", "bar");
+  const [budgetKind, setBudgetKind] = useChartKind("dash.budget", "bars", BUDGET_OPTIONS);
+  const [statusKind, setStatusKind] = useChartKind("dash.status", "donut", STATUS_OPTIONS);
+  const [countryKind, setCountryKind] = useChartKind("dash.country", "heatmap", COUNTRY_OPTIONS);
+  const [riskBuKind, setRiskBuKind] = useChartKind("dash.riskbu", "bar", RISKBU_OPTIONS);
+  const [pipelineKind, setPipelineKind] = useChartKind("dash.pipeline", "bar", PIPELINE_OPTIONS);
 
   return (
     <div className="space-y-6">
@@ -130,7 +136,7 @@ export default function DashboardPage() {
           colSpan={2}
           kind={budgetKind}
           onKindChange={setBudgetKind}
-          options={["bars", "line", "area", "treemap"]}
+          options={[...BUDGET_OPTIONS]}
         >
           <BudgetSubsidiaryChart projects={projects} kind={budgetKind} />
         </ChartPanel>
@@ -140,7 +146,7 @@ export default function DashboardPage() {
           sub="Count of projects by lifecycle stage."
           kind={statusKind}
           onKindChange={setStatusKind}
-          options={["donut", "pie", "bar", "treemap"]}
+          options={[...STATUS_OPTIONS]}
         >
           <StatusDistributionChart projects={projects} kind={statusKind} />
         </ChartPanel>
@@ -153,7 +159,7 @@ export default function DashboardPage() {
           colSpan={2}
           kind={countryKind}
           onKindChange={setCountryKind}
-          options={["heatmap", "bar", "treemap"]}
+          options={[...COUNTRY_OPTIONS]}
         >
           <CountryRiskChart projects={projects} kind={countryKind} />
         </ChartPanel>
@@ -163,7 +169,7 @@ export default function DashboardPage() {
           sub="Composite 0–100 score."
           kind={riskBuKind}
           onKindChange={setRiskBuKind}
-          options={["bar", "lollipop", "donut", "treemap"]}
+          options={[...RISKBU_OPTIONS]}
         >
           <RiskByBuChart projects={projects} kind={riskBuKind} />
         </ChartPanel>
@@ -182,7 +188,7 @@ export default function DashboardPage() {
           sub="Projects ending per quarter."
           kind={pipelineKind}
           onKindChange={setPipelineKind}
-          options={["bar", "line", "area", "lollipop"]}
+          options={[...PIPELINE_OPTIONS]}
         >
           <DeliveryPipelineChart projects={projects} kind={pipelineKind} />
         </ChartPanel>
