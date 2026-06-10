@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useMemo } from "react";
 import { useApp } from "@/components/AppProvider";
 import { KpiCard } from "@/components/KpiCard";
 
@@ -49,19 +50,27 @@ const PIPELINE_OPTIONS = ["bar", "line", "area", "lollipop"] as const satisfies 
 
 export default function DashboardPage() {
   const { projects } = useApp();
-  const kpis = portfolioKpis(projects);
-  const insights = executiveInsights(projects).slice(0, 4);
+  // Derived analytics walk the full project list; memoize so they only recompute
+  // when `projects` changes (filters/data), not on every render of this page.
+  const kpis = useMemo(() => portfolioKpis(projects), [projects]);
+  const insights = useMemo(() => executiveInsights(projects).slice(0, 4), [projects]);
 
-  const active = projects.filter((p) => p.status !== "Completed" && p.status !== "Cancelled");
-  const cpiValues = active.map((p) => forecastCost(p).cpi).filter((v) => Number.isFinite(v) && v > 0);
-  const avgCpi = cpiValues.length > 0 ? cpiValues.reduce((s, v) => s + v, 0) / cpiValues.length : 1;
+  const avgCpi = useMemo(() => {
+    const active = projects.filter((p) => p.status !== "Completed" && p.status !== "Cancelled");
+    const cpiValues = active.map((p) => forecastCost(p).cpi).filter((v) => Number.isFinite(v) && v > 0);
+    return cpiValues.length > 0 ? cpiValues.reduce((s, v) => s + v, 0) / cpiValues.length : 1;
+  }, [projects]);
 
-  const pendingApprovals = projects.filter((p) =>
-    p.approvals.some((a) => a.decision === "Pending") &&
-    !p.approvals.some((a) => a.decision === "Rejected")
-  ).length;
+  const pendingApprovals = useMemo(
+    () =>
+      projects.filter((p) =>
+        p.approvals.some((a) => a.decision === "Pending") &&
+        !p.approvals.some((a) => a.decision === "Rejected")
+      ).length,
+    [projects]
+  );
 
-  const alertCounts = alertSeverityCounts(evaluateAlerts(projects));
+  const alertCounts = useMemo(() => alertSeverityCounts(evaluateAlerts(projects)), [projects]);
   const totalAlerts = alertCounts.critical + alertCounts.warn + alertCounts.info;
 
   const [budgetKind, setBudgetKind] = useChartKind("dash.budget", "bars", BUDGET_OPTIONS);

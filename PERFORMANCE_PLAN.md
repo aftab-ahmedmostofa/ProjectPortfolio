@@ -172,4 +172,37 @@ async chunks after first paint. Targets (≤160 / ≤170 kB) exceeded.
 - **DB load:** N/A (no database).
 - **Infra cost:** smaller transfer per visit; security posture improved.
 
-Tier 2 / Tier 3 remain **not started** — awaiting a separate go-ahead.
+## ✅ Implementation results — Tier 2 (completed 2026-06-10)
+
+Implemented **T2.1 + T2.2 + T2.3**. Verified with `npm run build`, `curl`
+endpoint tests, and a Playwright probe of `/ai-insights` and `/` (no console
+errors; brief renders; dashboard unchanged).
+
+### What landed
+- **T2.1 — hardened `POST /api/insights`** (`src/app/api/insights/route.ts`):
+  per-IP fixed-window rate limit (30/min → **429** + `Retry-After`), request
+  size cap 256 KB (**413**, checked via `Content-Length` *and* actual body
+  length), `projects` must be an array (**400**) capped at 500 (**413**), and
+  non-object entries filtered out before reaching the LLM. Happy path unchanged.
+  - Endpoint tests: valid→200 · malformed→400 · wrong-shape→400 ·
+    >500 projects→413 · >256 KB→413. Real UI call (`/ai-insights`) → **200**,
+    6 insights.
+- **T2.2 — prompt-injection guard** (`src/lib/llm.ts`): user-derived findings
+  (which embed project names) are wrapped in an explicit delimiter, delimiter
+  look-alikes are stripped, and the system prompt instructs the model to treat
+  the block strictly as data and ignore embedded instructions.
+- **T2.3 — memoized dashboard analytics** (`src/app/page.tsx`): `portfolioKpis`,
+  `executiveInsights`, `avgCpi`, `pendingApprovals`, and `alertCounts` wrapped
+  in `useMemo([projects])` so they recompute on data/filter change, not on every
+  render.
+
+### Impact
+- **Security:** the one paid-LLM endpoint is no longer an open
+  cost-amplification/DoS vector; prompt injection via crafted project names is
+  blunted. No behavior change for legitimate use.
+- **Response time:** removes redundant per-render O(n) analytics passes on the
+  dashboard. Bundle sizes unchanged (`/` 116 kB, `/pm-summary` 107 kB).
+- **DB load / infra:** N/A / negligible (rate limit is in-memory per instance —
+  a multi-instance deploy should back it with a shared store).
+
+Tier 3 remains **not started** — awaiting a separate go-ahead.
