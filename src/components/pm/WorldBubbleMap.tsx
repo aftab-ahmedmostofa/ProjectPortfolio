@@ -1,10 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { geoNaturalEarth1, geoPath } from "d3-geo";
-import { feature } from "topojson-client";
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import worldTopo from "world-atlas/countries-110m.json";
+import { geoNaturalEarth1 } from "d3-geo";
+import { LAND_PATH, MAP_WIDTH, MAP_HEIGHT } from "./worldLandPath";
 
 // Accurate country centroids (lat, lon). Sourced from public data.
 const COUNTRY_COORDS: Record<string, { lat: number; lon: number }> = {
@@ -28,30 +26,13 @@ const COUNTRY_COORDS: Record<string, { lat: number; lon: number }> = {
   "South Africa": { lat: -30.56, lon: 22.94 },
 };
 
-const MAP_WIDTH = 1000;
-const MAP_HEIGHT = 500;
-
 // Build the projection once. Natural Earth gives a pleasant world shape and
-// fits accurately to the supplied viewport.
+// fits accurately to the supplied viewport. This must match the projection used
+// by scripts/gen-world-path.mjs so bubbles align with the precomputed land
+// outline (LAND_PATH).
 const projection = geoNaturalEarth1().fitSize([MAP_WIDTH, MAP_HEIGHT], {
   type: "Sphere",
 } as unknown as GeoJSON.GeometryObject);
-
-const pathGenerator = geoPath(projection);
-
-// Resolve the topojson countries into a single SVG path string at module load.
-function buildLandPath(): string {
-  // @ts-expect-error world-atlas topojson typing is loose; we know the shape.
-  const fc = feature(worldTopo, worldTopo.objects.countries) as FeatureCollection<Polygon | MultiPolygon>;
-  const parts: string[] = [];
-  for (const f of fc.features) {
-    const d = pathGenerator(f);
-    if (d) parts.push(d);
-  }
-  return parts.join(" ");
-}
-
-const LAND_PATH = buildLandPath();
 
 // Project a (lat, lon) point to (x, y) in the SVG viewport. Returns null
 // when the point falls outside the map.

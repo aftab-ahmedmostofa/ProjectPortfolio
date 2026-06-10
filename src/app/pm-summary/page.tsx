@@ -19,16 +19,40 @@ import {
   healthOf,
   resourceUtilisation,
 } from "@/lib/pmAnalytics";
+import dynamic from "next/dynamic";
 import { PmKpiCard } from "@/components/pm/PmKpiCard";
-import { WorldBubbleMap } from "@/components/pm/WorldBubbleMap";
-import { CategoricalChart } from "@/components/pm/CategoricalChart";
-import { TrendChart } from "@/components/pm/TrendChart";
-import { HealthChart } from "@/components/pm/HealthChart";
-import { ScatterOrBars } from "@/components/pm/ScatterOrBars";
-import { RankingChart } from "@/components/pm/RankingChart";
 import { ChartTypeSelector, ChartKind } from "@/components/pm/ChartTypeSelector";
 import { useChartKind } from "@/components/pm/useChartKind";
 import { useRouter } from "next/navigation";
+
+// recharts-based panels + the world map are heavy. Load them lazily (client-
+// only) so their chunks stay out of this page's First Load JS. The KPI strips
+// paint immediately; charts stream in just after.
+const chartLoading = () => <div className="h-[200px] w-full animate-pulse rounded bg-slate-100" />;
+const WorldBubbleMap = dynamic(
+  () => import("@/components/pm/WorldBubbleMap").then((m) => m.WorldBubbleMap),
+  { ssr: false, loading: chartLoading }
+);
+const CategoricalChart = dynamic(
+  () => import("@/components/pm/CategoricalChart").then((m) => m.CategoricalChart),
+  { ssr: false, loading: chartLoading }
+);
+const TrendChart = dynamic(
+  () => import("@/components/pm/TrendChart").then((m) => m.TrendChart),
+  { ssr: false, loading: chartLoading }
+);
+const HealthChart = dynamic(
+  () => import("@/components/pm/HealthChart").then((m) => m.HealthChart),
+  { ssr: false, loading: chartLoading }
+);
+const ScatterOrBars = dynamic(
+  () => import("@/components/pm/ScatterOrBars").then((m) => m.ScatterOrBars),
+  { ssr: false, loading: chartLoading }
+);
+const RankingChart = dynamic(
+  () => import("@/components/pm/RankingChart").then((m) => m.RankingChart),
+  { ssr: false, loading: chartLoading }
+);
 
 export default function PmSummaryPage() {
   const { projects, members, filters, setFilters, resetFilters } = useApp();

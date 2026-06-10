@@ -1,15 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useApp } from "@/components/AppProvider";
 import { KpiCard } from "@/components/KpiCard";
-import {
-  StatusDistributionChart,
-  BudgetSubsidiaryChart,
-  RiskByBuChart,
-  CountryRiskChart,
-  DeliveryPipelineChart,
-} from "@/components/dashboard/DashCharts";
+
+// recharts is heavy (~5 MB package). Load each chart lazily so its code stays
+// out of the dashboard's First Load JS — the KPI strip paints immediately and
+// charts stream in just below the fold.
+const chartLoading = () => <div className="h-[220px] w-full animate-pulse rounded bg-slate-100" />;
+const StatusDistributionChart = dynamic(
+  () => import("@/components/dashboard/DashCharts").then((m) => m.StatusDistributionChart),
+  { ssr: false, loading: chartLoading }
+);
+const BudgetSubsidiaryChart = dynamic(
+  () => import("@/components/dashboard/DashCharts").then((m) => m.BudgetSubsidiaryChart),
+  { ssr: false, loading: chartLoading }
+);
+const RiskByBuChart = dynamic(
+  () => import("@/components/dashboard/DashCharts").then((m) => m.RiskByBuChart),
+  { ssr: false, loading: chartLoading }
+);
+const CountryRiskChart = dynamic(
+  () => import("@/components/dashboard/DashCharts").then((m) => m.CountryRiskChart),
+  { ssr: false, loading: chartLoading }
+);
+const DeliveryPipelineChart = dynamic(
+  () => import("@/components/dashboard/DashCharts").then((m) => m.DeliveryPipelineChart),
+  { ssr: false, loading: chartLoading }
+);
 import { TopAtRiskPanel } from "@/components/TopAtRiskPanel";
 import { ApprovalQueueWidget } from "@/components/ApprovalQueueWidget";
 import { ChartTypeSelector, ChartKind } from "@/components/pm/ChartTypeSelector";
